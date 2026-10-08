@@ -4,8 +4,13 @@ import API from "../api/axios";
 import { useLanguage } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
 import { getLocationName } from "../utils/geocode";
+import {
+  cacheJob,
+  getCachedJob,} from "../utils/offline"
 
 export default function JobDetail() {
+  const [isoffline, setIsOffline] = useState(false);
+
   const { id } = useParams();
   const { t } = useLanguage();
   const { user } = useAuth();
@@ -15,19 +20,61 @@ export default function JobDetail() {
   const [error, setError] = useState("");
   const [locationName, setLocationName] = useState("");
 
+  // useEffect(() => {
+  //   const fetchJob = async () => {
+  //     try {
+  //       const res = await API.get(`/jobs/${id}`);
+  //       setJob(res.data);
+  //     } catch (err) {
+  //       setError(err.response?.data?.message || "Failed to load job details");
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
+  //   fetchJob();
+  // }, [id]);
+
   useEffect(() => {
-    const fetchJob = async () => {
-      try {
-        const res = await API.get(`/jobs/${id}`);
-        setJob(res.data);
-      } catch (err) {
-        setError(err.response?.data?.message || "Failed to load job details");
+    const online = () => setIsOffline(false);
+    const offline = () => setIsOffline(true);
+
+    window.addEventListener("online", online);
+    window.addEventListener("offline", offline);
+
+    return () => {
+      window.removeEventListener("online", online);
+      window.removeEventListener("offline", offline);
+    };
+  }, []);
+
+  useEffect(() => {
+  const fetchJob = async () => {
+    const cachedJob = getCachedJob(id);
+
+    try {
+         const res = await API.get(`/jobs/${id}`);
+         setJob(res.data);
+         cacheJob(res.job);
+
+     } catch (err) 
+      {
+        if(cachedJob){
+          setJob(cachedJob);
+          return;
+        }
+
+        setError("Unable to load this job"
+        );
       } finally {
         setLoading(false);
       }
     };
+
     fetchJob();
+
   }, [id]);
+
+
 
   useEffect(() => {
     if (job?.location?.lat && job?.location?.lng) {
@@ -103,7 +150,10 @@ export default function JobDetail() {
 
       {/* ─── Main Content Canvas ─── */}
       <main className="w-full max-w-container-max mx-auto px-4 md:px-8 py-8 flex flex-col gap-6 animate-fade-in-up">
-        
+
+        {isoffline && (
+          <div className = "mb-4 rounded-lg bg-amber-100 px-4 py-3 text-amber-800">"You are offline. Showing cached job information.</div>
+        )}
         {/* Safety Banner */}
         {job.isSuspicious ? (
           <div className="elevation-1 rounded-2xl p-5 flex items-start gap-4 border-l-4 border-error bg-error-container/30 border border-error/20">

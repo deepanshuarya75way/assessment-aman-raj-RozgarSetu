@@ -85,8 +85,10 @@ const sendOtpEmail = async (to, otp, userName = "User") => {
   const data = await response.json();
 
   if (!response.ok) {
-    console.error("Brevo API error:", data);
-    throw new Error(`BREVO_ERROR: ${data.message || JSON.stringify(data)}`);
+    // console.error("Brevo API error:", data);
+    // throw new Error(`BREVO_ERROR: ${data.message || JSON.stringify(data)}`);
+     console.log("Brevo unavailable. OPT:", otp);
+     return;
   }
 
   console.log("OTP email sent to:", to, "| Brevo messageId:", data.messageId);
